@@ -1,0 +1,1311 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SICOR — Bot RPA</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --navy:    #0F172A;
+      --navy2:   #1E293B;
+      --blue:    #0369A1;
+      --blue2:   #0EA5E9;
+      --bg:      #F1F5F9;
+      --card:    #FFFFFF;
+      --text:    #0F172A;
+      --muted:   #64748B;
+      --border:  #E2E8F0;
+      --radius:  10px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+
+    body {
+      background: var(--bg);
+      font-family: 'Inter', sans-serif;
+      color: var(--text);
+      font-size: .875rem;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* ── Navbar ─────────────────────────────── */
+    .topbar {
+      background: var(--navy);
+      padding: .6rem 1.5rem;
+      border-bottom: 3px solid var(--blue);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+      gap: 1rem;
+    }
+    .brand-title { font-family:'Fira Code',monospace; font-weight:600; font-size:.9rem; color:#F8FAFC; letter-spacing:.3px; }
+    .brand-sub   { font-size:.65rem; color:#94A3B8; margin-top:1px; }
+
+    /* ── Bot pill ── */
+    .bot-pill {
+      display:flex; align-items:center; gap:7px;
+      background:rgba(255,255,255,.06);
+      border:1px solid rgba(255,255,255,.12);
+      border-radius:20px; padding:5px 13px;
+      color:#CBD5E1; font-size:.75rem; user-select:none;
+    }
+    .bot-dot { width:8px;height:8px;border-radius:50%;background:#475569;flex-shrink:0;transition:background .3s; }
+    .bot-dot.online     { background:#22C55E;box-shadow:0 0 6px #22C55E88; animation:pulse-green 2s infinite; }
+    .bot-dot.processing { background:#38BDF8; animation:blink .85s infinite; }
+    .bot-dot.paused     { background:#F59E0B; }
+    @keyframes pulse-green { 0%,100%{box-shadow:0 0 4px #22C55E66}50%{box-shadow:0 0 10px #22C55Eaa} }
+    @keyframes blink       { 0%,100%{opacity:1}50%{opacity:.3} }
+
+    .topbar-btns { display:flex; align-items:center; gap:6px; }
+    .topbar-btns .btn-ctrl {
+      font-size:.73rem; border-radius:6px; padding:.3rem .75rem;
+      border:none; font-weight:600; cursor:pointer; transition:opacity .15s, filter .15s;
+    }
+    .topbar-btns .btn-ctrl:hover { filter: brightness(1.1); }
+    .btn-pausar  { background:#D97706; color:#fff; }
+    .btn-retomar { background:#16A34A; color:#fff; }
+    .btn-parar   { background:#DC2626; color:#fff; }
+
+    /* ── Stats row ─────────────────────────── */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: .5rem;
+      padding: .75rem 1.5rem;
+      flex-shrink: 0;
+    }
+    .stat-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: .6rem .75rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      box-shadow: 0 1px 3px rgba(0,0,0,.04);
+    }
+    .stat-card.divider-left { border-left: 3px solid var(--border); }
+    .stat-val   { font-family:'Fira Code',monospace; font-size:1.4rem; font-weight:700; line-height:1; margin-bottom:2px; }
+    .stat-label { font-size:.6rem; text-transform:uppercase; letter-spacing:.5px; color:var(--muted); white-space:nowrap; }
+
+    /* ── Main content ────────────────────────── */
+    .main-area {
+      flex: 1;
+      overflow: hidden;
+      display: flex;
+      padding: 0 1.5rem 1rem;
+      gap: .75rem;
+    }
+
+    /* ── Input panel ── */
+    .input-panel {
+      width: 260px;
+      min-width: 240px;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      gap: .5rem;
+    }
+    .panel-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: 0 1px 3px rgba(0,0,0,.05);
+      overflow: hidden;
+    }
+    .panel-card-header {
+      padding: .6rem 1rem;
+      font-size: .7rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: .6px;
+      color: var(--muted);
+      border-bottom: 1px solid var(--border);
+      background: #F8FAFC;
+    }
+    .panel-card-body { padding: .75rem 1rem; }
+
+    textarea.codes-area {
+      font-family:'Fira Code',monospace; font-size:.78rem;
+      border:1px solid var(--border); border-radius:7px;
+      background:#FAFAFA; color:var(--text); resize:none;
+      transition:border-color .15s, box-shadow .15s; width:100%;
+      padding: .5rem .7rem; min-height: 140px;
+    }
+    textarea.codes-area:focus {
+      border-color:var(--blue); box-shadow:0 0 0 3px rgba(3,105,161,.1);
+      outline:none; background:#fff;
+    }
+
+    .btn-iniciar {
+      display:flex; align-items:center; justify-content:center; gap:7px;
+      background:var(--blue); color:#fff; border:none; border-radius:8px;
+      padding:.6rem 1rem; font-weight:600; font-size:.82rem; width:100%;
+      cursor:pointer; transition:background .15s, transform .1s;
+    }
+    .btn-iniciar:hover:not(:disabled)  { background:#0284C7; }
+    .btn-iniciar:active:not(:disabled) { transform:scale(.98); }
+    .btn-iniciar:disabled { background:#94A3B8; cursor:not-allowed; }
+
+    .btn-secondary-sm {
+      display:flex; align-items:center; justify-content:center;
+      width:100%; padding:.45rem; font-size:.73rem; font-weight:500;
+      background:transparent; border:1px solid var(--border); border-radius:7px;
+      color:var(--muted); cursor:pointer; transition:all .15s;
+    }
+    .btn-secondary-sm:hover { border-color:#94A3B8; color:var(--text); }
+
+    /* ── Progress bar ── */
+    .prog-wrap { margin-top:.5rem; }
+    .prog-header { display:flex; justify-content:space-between; margin-bottom:4px; font-size:.68rem; color:var(--muted); }
+    .prog-bar-track { height:4px; border-radius:4px; background:var(--border); }
+    .prog-bar-fill  { height:100%; border-radius:4px; background:var(--blue); transition:width .5s; }
+
+    /* ── Content panel ── */
+    .content-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: 0 1px 3px rgba(0,0,0,.05);
+      overflow: hidden;
+    }
+
+    /* ── Tabs ── */
+    .tab-bar {
+      display: flex;
+      align-items: center;
+      border-bottom: 2px solid var(--border);
+      padding: 0 1rem;
+      flex-shrink: 0;
+      background: #FAFBFC;
+    }
+    .tab-btn {
+      display: flex; align-items: center; gap:.4rem;
+      padding: .65rem 1rem;
+      font-size: .78rem; font-weight: 500;
+      color: var(--muted);
+      border: none; background: transparent;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -2px;
+      cursor: pointer;
+      transition: color .15s, border-color .15s;
+    }
+    .tab-btn:hover   { color: var(--navy); }
+    .tab-btn.active  { color: var(--blue); border-bottom-color: var(--blue); font-weight: 600; }
+    .tab-badge {
+      font-size: .58rem; font-weight: 700; padding: 1px 6px;
+      border-radius: 20px; background: #E2E8F0; color: var(--muted);
+    }
+    .tab-btn.active .tab-badge { background: var(--blue); color: #fff; }
+
+    .tab-panes { flex:1; overflow:hidden; position:relative; }
+    .tab-pane  { display:none; height:100%; flex-direction:column; }
+    .tab-pane.active { display:flex; }
+
+    /* ── Tables ── */
+    .table-scroll { overflow: auto; flex:1; }
+    table { width:100%; border-collapse:collapse; font-size:.78rem; }
+    thead th {
+      position: sticky; top: 0; z-index: 2;
+      background: #F8FAFC;
+      padding: .5rem .875rem;
+      font-size: .65rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: .5px;
+      color: var(--muted);
+      border-bottom: 2px solid var(--border);
+      white-space: nowrap;
+    }
+    tbody td { padding: .42rem .875rem; vertical-align: middle; border-bottom: 1px solid #F1F5F9; }
+    tbody tr:hover td { background: #EFF6FF; }
+    tbody tr.selected td { background: #DBEAFE; }
+    .mono { font-family:'Fira Code',monospace; }
+
+    /* ── Status badges ── */
+    .sbadge { display:inline-block; padding:2px 9px; border-radius:20px; font-size:.65rem; font-weight:700; letter-spacing:.2px; }
+    .s-Pendente     { background:#FEF3C7; color:#92400E; }
+    .s-Processando  { background:#DBEAFE; color:#1E40AF; }
+    .s-Concluído    { background:#DCFCE7; color:#166534; }
+    .s-Erro         { background:#FEE2E2; color:#991B1B; }
+    .s-Autorizado   { background:#E0F2FE; color:#075985; }
+    .s-Cancelado    { background:#FEE2E2; color:#991B1B; }
+    .s-Requisitado  { background:#FEF3C7; color:#92400E; }
+    .s-CompraTotal  { background:#DCFCE7; color:#166534; }
+    .s-default      { background:#F1F5F9; color:#475569; }
+
+    /* ── Toolbar (resultados) ── */
+    .toolbar {
+      display: flex; align-items: center; gap: .4rem;
+      padding: .5rem .875rem;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+      flex-wrap: wrap;
+      background: #FAFBFC;
+    }
+
+    .search-wrap {
+      position: relative;
+      flex: 1;
+      min-width: 180px;
+      max-width: 340px;
+    }
+    .search-wrap svg { position:absolute; left:8px; top:50%; transform:translateY(-50%); color:var(--muted); pointer-events:none; }
+    .search-input {
+      width:100%; padding:.35rem .5rem .35rem 2rem;
+      font-size:.75rem; border:1px solid var(--border);
+      border-radius:6px; background:#fff; color:var(--text);
+      transition:border-color .15s, box-shadow .15s;
+    }
+    .search-input:focus { outline:none; border-color:var(--blue); box-shadow:0 0 0 2px rgba(3,105,161,.1); }
+    .search-clear {
+      position:absolute; right:6px; top:50%; transform:translateY(-50%);
+      background:none; border:none; color:var(--muted); font-size:1rem;
+      cursor:pointer; padding:0 2px; display:none; line-height:1;
+    }
+
+    .filter-chip {
+      display:inline-flex; align-items:center; gap:3px;
+      padding:.28rem .75rem; border-radius:20px; font-size:.68rem; font-weight:600;
+      border:1.5px solid var(--border); cursor:pointer;
+      transition:all .12s; background:var(--card); color:var(--muted);
+      white-space:nowrap;
+    }
+    .filter-chip:hover  { border-color:var(--blue); color:var(--blue); }
+    .filter-chip.active { background:var(--blue); color:#fff; border-color:var(--blue); }
+
+    .toolbar-right { display:flex; gap:.4rem; margin-left:auto; flex-shrink:0; align-items:center; }
+
+    .btn-tb {
+      display:flex; align-items:center; gap:5px;
+      padding:.3rem .75rem; font-size:.72rem; font-weight:500;
+      border-radius:6px; cursor:pointer; transition:all .12s;
+      white-space:nowrap;
+    }
+    .btn-tb-outline { background:transparent; border:1px solid var(--border); color:var(--muted); }
+    .btn-tb-outline:hover { border-color:#94A3B8; color:var(--text); }
+    .btn-tb-danger  { background:transparent; border:1px solid #FCA5A5; color:#DC2626; }
+    .btn-tb-danger:hover { background:#FEE2E2; }
+    .btn-tb-print   { background:transparent; border:1px solid #7DD3FC; color:var(--blue); }
+    .btn-tb-print:hover { background:#E0F2FE; }
+
+    /* ── Modal de relatório ── */
+    .rel-overlay {
+      display:none; position:fixed; inset:0; z-index:1000;
+      background:rgba(15,23,42,.55); backdrop-filter:blur(3px);
+      align-items:center; justify-content:center;
+    }
+    .rel-overlay.open { display:flex; }
+    .rel-modal {
+      background:#fff; border-radius:12px;
+      box-shadow:0 24px 64px rgba(0,0,0,.22);
+      width:96vw; max-width:1100px;
+      height:92vh; display:flex; flex-direction:column;
+      overflow:hidden; animation:modal-in .18s ease;
+    }
+    @keyframes modal-in { from{transform:translateY(16px);opacity:0}to{transform:translateY(0);opacity:1} }
+    .rel-head {
+      display:flex; align-items:center; justify-content:space-between;
+      padding:.75rem 1.25rem;
+      border-bottom:1px solid var(--border);
+      background:#F8FAFC; flex-shrink:0;
+    }
+    .rel-head-title { font-weight:700; font-size:.9rem; color:var(--navy); }
+    .rel-close { background:none; border:none; font-size:1.3rem; color:var(--muted); cursor:pointer; line-height:1; padding:0 4px; }
+    .rel-close:hover { color:var(--text); }
+    .rel-filters {
+      display:flex; flex-wrap:wrap; gap:.5rem; align-items:flex-end;
+      padding:.75rem 1.25rem; border-bottom:1px solid var(--border);
+      flex-shrink:0; background:#FAFBFC;
+    }
+    .rel-field { display:flex; flex-direction:column; gap:3px; }
+    .rel-label { font-size:.63rem; font-weight:700; text-transform:uppercase; letter-spacing:.4px; color:var(--muted); }
+    .rel-input {
+      padding:.3rem .55rem; font-size:.78rem;
+      border:1px solid var(--border); border-radius:6px;
+      background:#fff; color:var(--text); min-width:110px;
+      transition:border-color .15s;
+    }
+    .rel-input:focus { outline:none; border-color:var(--blue); box-shadow:0 0 0 2px rgba(3,105,161,.1); }
+    .rel-input-wide { min-width:170px; }
+    .rel-btn-aplicar {
+      padding:.35rem 1rem; font-size:.78rem; font-weight:600;
+      background:var(--blue); color:#fff; border:none; border-radius:6px;
+      cursor:pointer; transition:background .15s; align-self:flex-end;
+    }
+    .rel-btn-aplicar:hover { background:#0284C7; }
+    .rel-btn-limpar {
+      padding:.35rem .8rem; font-size:.78rem; font-weight:500;
+      background:transparent; color:var(--muted);
+      border:1px solid var(--border); border-radius:6px;
+      cursor:pointer; transition:all .15s; align-self:flex-end;
+    }
+    .rel-btn-limpar:hover { border-color:#94A3B8; color:var(--text); }
+    .rel-info {
+      display:flex; align-items:center; justify-content:space-between;
+      padding:.45rem 1.25rem; border-bottom:1px solid var(--border);
+      flex-shrink:0; font-size:.72rem; color:var(--muted);
+    }
+    .rel-table-wrap { flex:1; overflow:auto; }
+    .rel-foot {
+      display:flex; align-items:center; justify-content:flex-end; gap:.5rem;
+      padding:.6rem 1.25rem; border-top:1px solid var(--border);
+      flex-shrink:0; background:#F8FAFC;
+    }
+    .sel-count { font-size:.7rem; color:var(--muted); white-space:nowrap; }
+
+    /* ── Empty state ── */
+    .empty-state { display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; color:#CBD5E1; padding:2rem; }
+    .empty-state svg { margin-bottom:.75rem; opacity:.4; }
+    .empty-state p { margin:0; font-size:.82rem; color:var(--muted); }
+
+    /* ── Toast ── */
+    .toast-wrap { position:fixed; bottom:1.25rem; right:1.25rem; z-index:9999; display:flex; flex-direction:column; gap:.4rem; }
+    .t-item {
+      display:flex; align-items:center; gap:8px;
+      padding:.6rem 1rem; border-radius:8px; color:#fff;
+      font-size:.78rem; box-shadow:0 4px 14px rgba(0,0,0,.2);
+      animation:slide-up .18s ease; max-width:320px;
+    }
+    .t-ok  { background:#14532D; }
+    .t-err { background:#7F1D1D; }
+    @keyframes slide-up { from{transform:translateY(12px);opacity:0}to{transform:translateY(0);opacity:1} }
+
+    /* ── Print ── */
+    @media print {
+      .topbar, .input-panel, .tab-bar, .toolbar, .no-print, .toast-wrap { display:none !important; }
+      body { background:#fff; height:auto; overflow:visible; }
+      .main-area { padding:0; }
+      .content-panel { border:none; box-shadow:none; }
+      .tab-panes, .tab-pane { display:block !important; height:auto; overflow:visible; }
+      .tab-pane:not(.active) { display:none !important; }
+      table { font-size:9pt; }
+      tbody td { border-bottom:1px solid #ddd; }
+      thead th { background:#1e3a5f !important; color:#fff !important; print-color-adjust:exact; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ══ NAVBAR ══════════════════════════════ -->
+<div class="topbar no-print">
+  <div class="d-flex align-items-center gap-3">
+    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#38BDF8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="2" y="3" width="20" height="14" rx="2"/>
+      <path d="M8 21h8M12 17v4M7 8h4M7 11h2"/>
+      <circle cx="16" cy="9.5" r="2.5"/>
+      <path d="M14.5 14c0-1 .7-1.8 1.5-1.8s1.5.8 1.5 1.8"/>
+    </svg>
+    <div>
+      <div class="brand-title">SICOR — Bot RPA</div>
+      <div class="brand-sub">Universidade Estadual de Londrina</div>
+    </div>
+  </div>
+
+  <div class="d-flex align-items-center gap-2">
+    <div class="bot-pill">
+      <div class="bot-dot" id="bot-dot"></div>
+      <span id="bot-label">Offline</span>
+      <span style="color:#64748B;font-size:.68rem;margin-left:2px" id="bot-host"></span>
+    </div>
+    <div class="topbar-btns">
+      <button class="btn-ctrl btn-pausar  d-none" id="btn-pausar"  onclick="pausarBot()">⏸ Pausar</button>
+      <button class="btn-ctrl btn-retomar d-none" id="btn-retomar" onclick="retomarBot()">▶ Retomar</button>
+      <button class="btn-ctrl btn-parar   d-none" id="btn-parar"   onclick="pararBot()">⏹ Parar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ STATS ════════════════════════════════ -->
+<div class="stats-row no-print">
+  <div class="stat-card">
+    <div class="stat-val" style="color:#16A34A" id="res-total">0</div>
+    <div class="stat-label">Total Result.</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-val" style="color:#64748B" id="res-sem-dados">0</div>
+    <div class="stat-label">Sem dados</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-val" style="color:#0369A1" id="res-com-oc">0</div>
+    <div class="stat-label">Com O.C.</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-val" style="color:#7C3AED" id="res-sem-oc">0</div>
+    <div class="stat-label">Sem O.C.</div>
+  </div>
+</div>
+
+<!-- ══ MAIN AREA ════════════════════════════ -->
+<div class="main-area">
+
+  <!-- ── Painel esquerdo ── -->
+  <div class="input-panel no-print">
+    <div class="panel-card" style="flex:1;display:flex;flex-direction:column;overflow:hidden">
+      <div class="panel-card-header">Nova Consulta</div>
+      <div class="panel-card-body d-flex flex-column gap-2" style="flex:1;overflow:auto">
+
+        <div>
+          <label style="font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);display:block;margin-bottom:4px">
+            Códigos de Material
+          </label>
+          <textarea id="codigos-input" class="codes-area"
+            placeholder="Cole os códigos aqui&#10;(um por linha)&#10;&#10;1614&#10;8399&#10;4624"></textarea>
+          <div style="font-size:.67rem;color:var(--muted);margin-top:3px">
+            <span id="count-codigos">0</span> código(s)
+          </div>
+        </div>
+
+        <button class="btn-iniciar" id="btn-iniciar" onclick="iniciarBot()">
+          <svg width="13" height="13" fill="currentColor" viewBox="0 0 16 16">
+            <path d="M11.596 8.697l-6.363 3.692c-.54.313-1.233-.066-1.233-.697V4.308c0-.63.692-1.01 1.233-.697l6.363 3.692a.802.802 0 0 1 0 1.394z"/>
+          </svg>
+          Iniciar Bot
+        </button>
+
+        <div id="progress-wrap" style="display:none">
+          <div class="prog-header">
+            <span>Progresso</span>
+            <span id="prog-text" style="color:var(--blue);font-weight:600">0 / 0</span>
+          </div>
+          <div class="prog-bar-track"><div class="prog-bar-fill" id="prog-bar" style="width:0%"></div></div>
+        </div>
+
+        <hr style="margin:.25rem 0;border-color:var(--border)">
+
+        <button class="btn-secondary-sm" onclick="limparConcluidos()">
+          Remover concluídos da fila
+        </button>
+
+        <hr style="margin:.25rem 0;border-color:var(--border)">
+
+        <div>
+          <label style="font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:#DC2626;display:block;margin-bottom:4px">
+            Reprocessar Códigos
+          </label>
+          <textarea id="reprocess-input" class="codes-area" style="min-height:60px"
+            placeholder="Códigos com dados errados&#10;(um por linha)&#10;&#10;44172&#10;44485"></textarea>
+          <div style="font-size:.67rem;color:var(--muted);margin-top:2px">
+            Apaga resultados existentes e recoloca na fila.
+          </div>
+        </div>
+        <button class="btn-secondary-sm" style="color:#DC2626;border-color:#FCA5A5" onclick="reprocessarCodigos()">
+          ↺ Reprocessar selecionados
+        </button>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Painel direito (abas) ── -->
+  <div class="content-panel">
+
+    <!-- Tab bar -->
+    <div class="tab-bar no-print">
+      <button class="tab-btn active" id="tab-btn-fila" onclick="mostrarTab('fila')">
+        Fila de Processamento
+        <span class="tab-badge" id="badge-fila">0</span>
+      </button>
+      <button class="tab-btn" id="tab-btn-resultados" onclick="mostrarTab('resultados')">
+        Resultados
+        <span class="tab-badge" id="badge-res">0</span>
+      </button>
+    </div>
+
+    <div class="tab-panes">
+
+      <!-- ── Aba: Fila ── -->
+      <div class="tab-pane active" id="tab-fila">
+        <div class="table-scroll">
+          <table>
+            <thead><tr>
+              <th>Código</th>
+              <th>Status</th>
+              <th>Adicionado em</th>
+              <th>Processado em</th>
+            </tr></thead>
+            <tbody id="tbody-fila">
+              <tr><td colspan="4">
+                <div class="empty-state">
+                  <svg width="36" height="36" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                      d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                  </svg>
+                  <p>Cole os códigos e clique em <strong>Iniciar Bot</strong></p>
+                </div>
+              </td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ── Aba: Resultados ── -->
+      <div class="tab-pane" id="tab-resultados">
+
+        <!-- Toolbar -->
+        <div class="toolbar no-print">
+
+          <!-- Busca -->
+          <div class="search-wrap">
+            <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
+            </svg>
+            <input type="text" class="search-input" id="search-input"
+              placeholder="Buscar por código, material, req., O.C., documento..."
+              oninput="aplicarBusca(this.value)">
+            <button class="search-clear" id="btn-clear-search" onclick="limparBusca()" title="Limpar">×</button>
+          </div>
+
+          <!-- Filtros -->
+          <button class="filter-chip active" id="fc-todos"  onclick="filtrarRes('todos')">Todos</button>
+          <button class="filter-chip"        id="fc-com-oc" onclick="filtrarRes('com-oc')">Com O.C.</button>
+          <button class="filter-chip"        id="fc-sem-oc" onclick="filtrarRes('sem-oc')">Sem O.C.</button>
+          <button class="filter-chip"        id="fc-vazio"  onclick="filtrarRes('vazio')">Sem dados</button>
+
+          <!-- Direita -->
+          <div class="toolbar-right">
+            <span class="sel-count" id="sel-count"></span>
+            <button class="btn-tb btn-tb-danger" id="btn-del-sel" style="display:none" onclick="deletarSelecionados()">
+              <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+              </svg>
+              Apagar selecionados
+            </button>
+            <button class="btn-tb btn-tb-print" onclick="abrirRelatorio()">
+              <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/>
+              </svg>
+              Relatório / Imprimir
+            </button>
+            <button class="btn-tb btn-tb-danger" onclick="limparResultados()">
+              <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+              </svg>
+              Limpar tudo
+            </button>
+          </div>
+        </div>
+
+        <div class="table-scroll">
+          <table id="results-table">
+            <thead><tr>
+              <th class="no-print" style="width:36px">
+                <input type="checkbox" id="check-all" onchange="toggleTodos(this)" style="cursor:pointer">
+              </th>
+              <th>Código</th>
+              <th>Material</th>
+              <th>Req.</th>
+              <th>Data Req.</th>
+              <th>Situação</th>
+              <th>Qtde</th>
+              <th>Vlr Req.</th>
+              <th>Vlr Emp.</th>
+              <th>Documento</th>
+              <th>O.C.</th>
+              <th>Dt. Emissão</th>
+              <th>C. Custo</th>
+            </tr></thead>
+            <tbody id="tbody-resultados">
+              <tr><td colspan="13">
+                <div class="empty-state">
+                  <svg width="36" height="36" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 10h18M3 14h18M10 3v18M14 3v18"/>
+                  </svg>
+                  <p>Nenhum resultado ainda</p>
+                </div>
+              </td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<!-- ══ MODAL RELATÓRIO ══════════════════════ -->
+<div class="rel-overlay" id="rel-overlay" onclick="fecharRelatorio(event)">
+  <div class="rel-modal" onclick="event.stopPropagation()">
+
+    <div class="rel-head">
+      <div class="rel-head-title">
+        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="margin-right:6px;vertical-align:-2px">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/>
+        </svg>
+        Relatório de Resultados
+      </div>
+      <button class="rel-close" onclick="fecharRelatorio()">×</button>
+    </div>
+
+    <div class="rel-filters">
+      <div class="rel-field">
+        <span class="rel-label">O.C.</span>
+        <select class="rel-input" id="rf-oc-tipo" onchange="aplicarFiltrosRel()">
+          <option value="">Qualquer</option>
+          <option value="tem">Com O.C.</option>
+          <option value="sem">Sem O.C.</option>
+        </select>
+      </div>
+      <div class="rel-field">
+        <span class="rel-label">Nº O.C.</span>
+        <input class="rel-input" id="rf-oc" type="text" placeholder="ex: 8637" oninput="aplicarFiltrosRel()">
+      </div>
+      <div class="rel-field">
+        <span class="rel-label">Requisição</span>
+        <input class="rel-input" id="rf-req" type="text" placeholder="ex: 22124" oninput="aplicarFiltrosRel()">
+      </div>
+      <div class="rel-field">
+        <span class="rel-label">Código / Material</span>
+        <input class="rel-input rel-input-wide" id="rf-material" type="text" placeholder="ex: 3514 ou CAL VIRGEM" oninput="aplicarFiltrosRel()">
+      </div>
+      <div class="rel-field">
+        <span class="rel-label">Situação</span>
+        <select class="rel-input" id="rf-situacao" onchange="aplicarFiltrosRel()">
+          <option value="">Todas</option>
+          <option>Autorizado</option>
+          <option>Requisitado</option>
+          <option>Empenhado Siaf</option>
+          <option>Empenhado Total</option>
+          <option>Compra Total</option>
+          <option>Cancelado</option>
+          <option>Sem dados</option>
+          <option>Erro</option>
+        </select>
+      </div>
+      <div class="rel-field">
+        <span class="rel-label">Data Req. De</span>
+        <input class="rel-input" id="rf-data-de" type="text" placeholder="dd/mm/aaaa" oninput="aplicarFiltrosRel()">
+      </div>
+      <div class="rel-field">
+        <span class="rel-label">Data Req. Até</span>
+        <input class="rel-input" id="rf-data-ate" type="text" placeholder="dd/mm/aaaa" oninput="aplicarFiltrosRel()">
+      </div>
+      <button class="rel-btn-limpar" onclick="limparFiltrosRel()">Limpar filtros</button>
+    </div>
+
+    <div class="rel-info">
+      <span id="rel-count">0 registro(s)</span>
+      <span style="font-size:.67rem;color:#94A3B8">Clique em "Imprimir" para gerar o relatório com os dados filtrados abaixo</span>
+    </div>
+
+    <div class="rel-table-wrap">
+      <table id="rel-table" style="width:100%;border-collapse:collapse;font-size:.76rem">
+        <thead>
+          <tr style="background:#F8FAFC">
+            <th style="padding:.45rem .8rem;font-size:.63rem;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);border-bottom:2px solid var(--border);white-space:nowrap;position:sticky;top:0;background:#F8FAFC;z-index:1">Código</th>
+            <th style="padding:.45rem .8rem;font-size:.63rem;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);border-bottom:2px solid var(--border);white-space:nowrap;position:sticky;top:0;background:#F8FAFC;z-index:1">Material</th>
+            <th style="padding:.45rem .8rem;font-size:.63rem;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);border-bottom:2px solid var(--border);white-space:nowrap;position:sticky;top:0;background:#F8FAFC;z-index:1">Req.</th>
+            <th style="padding:.45rem .8rem;font-size:.63rem;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);border-bottom:2px solid var(--border);white-space:nowrap;position:sticky;top:0;background:#F8FAFC;z-index:1">Data Req.</th>
+            <th style="padding:.45rem .8rem;font-size:.63rem;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);border-bottom:2px solid var(--border);white-space:nowrap;position:sticky;top:0;background:#F8FAFC;z-index:1">Situação</th>
+            <th style="padding:.45rem .8rem;font-size:.63rem;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);border-bottom:2px solid var(--border);text-align:right;white-space:nowrap;position:sticky;top:0;background:#F8FAFC;z-index:1">Qtde</th>
+            <th style="padding:.45rem .8rem;font-size:.63rem;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);border-bottom:2px solid var(--border);text-align:right;white-space:nowrap;position:sticky;top:0;background:#F8FAFC;z-index:1">Vlr Req.</th>
+            <th style="padding:.45rem .8rem;font-size:.63rem;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);border-bottom:2px solid var(--border);text-align:right;white-space:nowrap;position:sticky;top:0;background:#F8FAFC;z-index:1">Vlr Emp.</th>
+            <th style="padding:.45rem .8rem;font-size:.63rem;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);border-bottom:2px solid var(--border);white-space:nowrap;position:sticky;top:0;background:#F8FAFC;z-index:1">Documento</th>
+            <th style="padding:.45rem .8rem;font-size:.63rem;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);border-bottom:2px solid var(--border);white-space:nowrap;position:sticky;top:0;background:#F8FAFC;z-index:1">O.C.</th>
+            <th style="padding:.45rem .8rem;font-size:.63rem;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);border-bottom:2px solid var(--border);white-space:nowrap;position:sticky;top:0;background:#F8FAFC;z-index:1">Dt. Emissão</th>
+            <th style="padding:.45rem .8rem;font-size:.63rem;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);border-bottom:2px solid var(--border);white-space:nowrap;position:sticky;top:0;background:#F8FAFC;z-index:1">C. Custo</th>
+          </tr>
+        </thead>
+        <tbody id="rel-tbody"></tbody>
+      </table>
+    </div>
+
+    <div class="rel-foot">
+      <button class="rel-btn-limpar" onclick="fecharRelatorio()">Fechar</button>
+      <button class="rel-btn-aplicar" onclick="imprimirRelatorio()">
+        <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="margin-right:5px;vertical-align:-2px">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/>
+        </svg>
+        Imprimir relatório
+      </button>
+    </div>
+
+  </div>
+</div>
+
+<div class="toast-wrap" id="toast-wrap"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+// ── State ──────────────────────────────────
+let _allResults  = [];
+let _filtroAtual = 'todos';
+let _termoBusca  = '';
+
+// ── Tab navigation ─────────────────────────
+function mostrarTab(tab) {
+  ['fila','resultados'].forEach(t => {
+    document.getElementById('tab-' + t).classList.toggle('active', t === tab);
+    document.getElementById('tab-btn-' + t).classList.toggle('active', t === tab);
+  });
+}
+
+// ── Helpers ────────────────────────────────
+function sbadge(status) {
+  if (!status || status === '—') return '<span class="sbadge s-default">—</span>';
+  const map = { 'Pendente':'s-Pendente','Processando':'s-Processando','Concluído':'s-Concluído','Erro':'s-Erro','Autorizado':'s-Autorizado','Compra Total':'s-CompraTotal','Empenhado Siaf':'s-Processando','Empenhado Total':'s-Processando','Cancelado':'s-Cancelado','Requisitado':'s-Requisitado','Sem dados':'s-default' };
+  const cls = Object.keys(map).find(k => status.toLowerCase().includes(k.toLowerCase()));
+  return `<span class="sbadge ${cls ? map[cls] : 's-default'}">${status}</span>`;
+}
+
+function toast(msg, ok = true) {
+  const el = document.createElement('div');
+  el.className = `t-item ${ok ? 't-ok' : 't-err'}`;
+  el.innerHTML = `<span style="font-weight:700">${ok ? '✓' : '✕'}</span><span>${msg}</span>`;
+  document.getElementById('toast-wrap').appendChild(el);
+  setTimeout(() => el.remove(), 3500);
+}
+
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+document.getElementById('codigos-input').addEventListener('input', function () {
+  document.getElementById('count-codigos').textContent =
+    this.value.split('\n').filter(l => l.trim()).length;
+});
+
+// ── Bot controls ───────────────────────────
+function iniciarBot() {
+  const val = document.getElementById('codigos-input').value.trim();
+  if (!val) return toast('Cole pelo menos um código antes de iniciar.', false);
+  const btn = document.getElementById('btn-iniciar');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner-border spinner-border-sm" style="width:.9rem;height:.9rem"></span>&nbsp;Iniciando...';
+  google.script.run
+    .withSuccessHandler(r => {
+      btn.disabled = false;
+      btn.innerHTML = '<svg width="13" height="13" fill="currentColor" viewBox="0 0 16 16"><path d="M11.596 8.697l-6.363 3.692c-.54.313-1.233-.066-1.233-.697V4.308c0-.63.692-1.01 1.233-.697l6.363 3.692a.802.802 0 0 1 0 1.394z"/></svg> Iniciar Bot';
+      if (r && r.success) {
+        toast(`${r.added} código(s) adicionado(s) — bot ativado!`);
+        document.getElementById('codigos-input').value = '';
+        document.getElementById('count-codigos').textContent = '0';
+        carregarFila();
+      }
+    })
+    .withFailureHandler(e => {
+      btn.disabled = false;
+      btn.innerHTML = '<svg width="13" height="13" fill="currentColor" viewBox="0 0 16 16"><path d="M11.596 8.697l-6.363 3.692c-.54.313-1.233-.066-1.233-.697V4.308c0-.63.692-1.01 1.233-.697l6.363 3.692a.802.802 0 0 1 0 1.394z"/></svg> Iniciar Bot';
+      toast('Erro: ' + e.message, false);
+    })
+    .startBot(val);
+}
+
+function pararBot() {
+  if (!confirm('Parar o bot?')) return;
+  google.script.run
+    .withSuccessHandler(() => toast('Comando de parada enviado.'))
+    .withFailureHandler(e => toast('Erro: ' + e.message, false))
+    .stopBot();
+}
+
+function pausarBot() {
+  google.script.run
+    .withSuccessHandler(() => toast('Bot pausado.'))
+    .withFailureHandler(e => toast('Erro: ' + e.message, false))
+    .pauseBot();
+}
+
+function retomarBot() {
+  google.script.run
+    .withSuccessHandler(() => toast('Bot retomado.'))
+    .withFailureHandler(e => toast('Erro: ' + e.message, false))
+    .resumeBot();
+}
+
+// ── Data loaders ───────────────────────────
+function carregarFila() {
+  google.script.run
+    .withSuccessHandler(rows => {
+      rows = rows || [];
+      document.getElementById('badge-fila').textContent = rows.length;
+      const tbody = document.getElementById('tbody-fila');
+      if (!rows.length) {
+        tbody.innerHTML = `<tr><td colspan="4"><div class="empty-state" style="height:200px">
+          <svg width="36" height="36" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+              d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+          </svg><p>Fila vazia</p></div></td></tr>`;
+        return;
+      }
+      tbody.innerHTML = rows.map(r =>
+        `<tr>
+          <td class="mono" style="font-weight:600">${esc(r.codigo)}</td>
+          <td>${sbadge(r.status)}</td>
+          <td style="color:var(--muted);font-size:.72rem">${esc(r.adicionado||'—')}</td>
+          <td style="color:var(--muted);font-size:.72rem">${esc(r.processado||'—')}</td>
+        </tr>`
+      ).join('');
+      atualizarProgresso(rows);
+    })
+    .withFailureHandler(e => toast('Erro ao carregar fila: ' + e.message, false))
+    .listarCodigos();
+}
+
+function carregarResultados() {
+  const tbody = document.getElementById('tbody-resultados');
+  tbody.innerHTML = `<tr><td colspan="13" style="text-align:center;padding:1.5rem;color:var(--muted);font-size:.78rem">
+    <span class="spinner-border spinner-border-sm" style="width:.85rem;height:.85rem;margin-right:6px"></span>Carregando...
+  </td></tr>`;
+
+  // Contadores via função leve (todos os registros da planilha)
+  google.script.run
+    .withSuccessHandler(atualizarMiniContadores)
+    .withFailureHandler(() => {})
+    .contarResultados();
+
+  // Últimos 300 para o painel
+  google.script.run
+    .withSuccessHandler(rows => {
+      rows = rows || [];
+      _allResults = rows;
+      renderizarResultados();
+    })
+    .withFailureHandler(e => toast('Erro ao carregar resultados: ' + e.message, false))
+    .listarResultados();
+}
+
+function renderizarResultados() {
+  let filtrados = _allResults;
+
+  // Filtro chip
+  if (_filtroAtual === 'com-oc') {
+    filtrados = filtrados.filter(r => r.oc && String(r.oc).trim() && String(r.oc).trim() !== '—');
+  } else if (_filtroAtual === 'sem-oc') {
+    filtrados = filtrados.filter(r => !r.oc || !String(r.oc).trim() || String(r.oc).trim() === '—');
+  } else if (_filtroAtual === 'vazio') {
+    filtrados = filtrados.filter(r => !r.situacao || !String(r.situacao).trim() || r.situacao === '—');
+  }
+
+  // Busca de texto
+  if (_termoBusca) {
+    const t = _termoBusca;
+    filtrados = filtrados.filter(r =>
+      [r.codigo, r.material, r.req, r.oc, r.documento, r.situacao, r.data_req, r.c_custo]
+        .some(f => String(f||'').toLowerCase().includes(t))
+    );
+  }
+
+  document.getElementById('badge-res').textContent = _allResults.length;
+  const tbody = document.getElementById('tbody-resultados');
+
+  if (!filtrados.length) {
+    tbody.innerHTML = `<tr><td colspan="13"><div class="empty-state" style="height:200px">
+      <svg width="36" height="36" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 10h18M3 14h18M10 3v18M14 3v18"/>
+      </svg><p>${_termoBusca ? 'Nenhum resultado para "' + esc(_termoBusca) + '"' : 'Nenhum resultado para este filtro'}</p>
+    </div></td></tr>`;
+    return;
+  }
+
+  // Mapeia índice original para deleção
+  tbody.innerHTML = filtrados.map(r => {
+    const idx = _allResults.indexOf(r);
+    return `<tr data-idx="${idx}">
+      <td class="no-print" style="width:36px">
+        <input type="checkbox" class="row-check" onchange="atualizarSelecao()" style="cursor:pointer">
+      </td>
+      <td class="mono">${esc(r.codigo)}</td>
+      <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(r.material||'')}">${esc(r.material||'—')}</td>
+      <td class="mono">${esc(r.req||'—')}</td>
+      <td style="font-size:.72rem;white-space:nowrap">${esc(r.data_req||'—')}</td>
+      <td>${sbadge(r.situacao)}</td>
+      <td style="text-align:right">${esc(r.qtde||'—')}</td>
+      <td class="mono" style="text-align:right">${esc(r.vlr_req||'—')}</td>
+      <td class="mono" style="text-align:right">${esc(r.vlr_emp||'—')}</td>
+      <td style="font-size:.72rem;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(r.documento||'')}">${esc(r.documento||'—')}</td>
+      <td class="mono" style="font-weight:600;color:${r.oc && r.oc !== '—' ? 'var(--blue)' : 'var(--muted)'}">${esc(r.oc||'—')}</td>
+      <td style="font-size:.72rem;white-space:nowrap">${esc(r.data_emissao||'—')}</td>
+      <td class="mono">${esc(r.c_custo||'—')}</td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('check-all').checked = false;
+  atualizarSelecao();
+}
+
+// ── Busca ───────────────────────────────────
+function aplicarBusca(termo) {
+  _termoBusca = termo.trim().toLowerCase();
+  document.getElementById('btn-clear-search').style.display = _termoBusca ? '' : 'none';
+  renderizarResultados();
+}
+
+function limparBusca() {
+  _termoBusca = '';
+  document.getElementById('search-input').value = '';
+  document.getElementById('btn-clear-search').style.display = 'none';
+  renderizarResultados();
+}
+
+// ── Filtros chip ────────────────────────────
+function filtrarRes(tipo) {
+  _filtroAtual = tipo;
+  ['todos','com-oc','sem-oc','vazio'].forEach(k =>
+    document.getElementById('fc-' + k).classList.toggle('active', k === tipo)
+  );
+  renderizarResultados();
+}
+
+// ── Checkboxes ──────────────────────────────
+function toggleTodos(cb) {
+  document.querySelectorAll('.row-check').forEach(c => c.checked = cb.checked);
+  atualizarSelecao();
+}
+
+function atualizarSelecao() {
+  const checks  = document.querySelectorAll('.row-check');
+  const checked = [...checks].filter(c => c.checked);
+  document.getElementById('sel-count').textContent = checked.length > 0 ? `${checked.length} selecionado(s)` : '';
+  document.getElementById('btn-del-sel').style.display = checked.length > 0 ? '' : 'none';
+}
+
+function deletarSelecionados() {
+  const rows = document.querySelectorAll('#tbody-resultados tr[data-idx]');
+  const indices = [];
+  rows.forEach(tr => {
+    const cb = tr.querySelector('.row-check');
+    if (cb && cb.checked) indices.push(parseInt(tr.dataset.idx));
+  });
+  if (!indices.length) return;
+  if (!confirm(`Apagar ${indices.length} resultado(s) selecionado(s)?`)) return;
+  google.script.run
+    .withSuccessHandler(() => { toast(`${indices.length} resultado(s) apagado(s).`); carregarResultados(); })
+    .withFailureHandler(e => toast('Erro: ' + e.message, false))
+    .deletarResultadosSelecionados(indices);
+}
+
+// ── Print ───────────────────────────────────
+function imprimirResultados() {
+  let filtrados = _allResults;
+  if (_filtroAtual === 'com-oc') filtrados = filtrados.filter(r => r.oc && String(r.oc).trim() && String(r.oc) !== '—');
+  else if (_filtroAtual === 'sem-oc') filtrados = filtrados.filter(r => !r.oc || !String(r.oc).trim() || String(r.oc) === '—');
+  else if (_filtroAtual === 'vazio') filtrados = filtrados.filter(r => !r.situacao || !String(r.situacao).trim());
+  if (_termoBusca) {
+    const t = _termoBusca;
+    filtrados = filtrados.filter(r =>
+      [r.codigo,r.material,r.req,r.oc,r.documento,r.situacao].some(f=>String(f||'').toLowerCase().includes(t))
+    );
+  }
+
+  const date = new Date().toLocaleString('pt-BR');
+  const cols = ['Código','Material','Req.','Data Req.','Situação','Qtde','Vlr Req.','Vlr Emp.','Documento','O.C.','Dt. Emissão','C. Custo'];
+  const keys = ['codigo','material','req','data_req','situacao','qtde','vlr_req','vlr_emp','documento','oc','data_emissao','c_custo'];
+
+  const rows = filtrados.map(r =>
+    `<tr>${keys.map(k=>`<td>${esc(r[k]||'—')}</td>`).join('')}</tr>`
+  ).join('');
+
+  const html = `<!DOCTYPE html><html lang="pt-BR"><head>
+    <meta charset="UTF-8">
+    <title>SICOR — Resultados — ${date}</title>
+    <style>
+      body{font-family:Arial,sans-serif;font-size:10pt;color:#000;margin:20px}
+      h2{font-size:13pt;margin:0 0 3px}
+      p{font-size:9pt;color:#555;margin:0 0 12px}
+      table{width:100%;border-collapse:collapse;font-size:8pt}
+      th{background:#1e3a5f;color:#fff;padding:5px 7px;text-align:left;font-size:7.5pt;text-transform:uppercase;letter-spacing:.3px}
+      td{padding:4px 7px;border-bottom:1px solid #e2e8f0}
+      tr:nth-child(even) td{background:#f8fafc}
+      @media print{button{display:none}}
+    </style>
+  </head><body>
+    <h2>SICOR — Relatório de Resultados</h2>
+    <p>UEL · Gerado em ${date} · ${filtrados.length} registro(s)</p>
+    <table>
+      <thead><tr>${cols.map(c=>`<th>${c}</th>`).join('')}</tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+    <script>setTimeout(()=>{window.print();},300);<\/script>
+  </body></html>`;
+
+  const win = window.open('', '_blank', 'width=1000,height=700');
+  if (win) {
+    win.document.write(html);
+    win.document.close();
+  } else {
+    toast('Habilite popups para imprimir.', false);
+  }
+}
+
+// ── Contadores ──────────────────────────────
+function atualizarMiniContadores(c) {
+  // c vem do contarResultados() do GAS — dados completos da planilha
+  if (!c) return;
+  document.getElementById('res-total').textContent     = c.total;
+  document.getElementById('res-sem-dados').textContent  = c.semDados;
+  document.getElementById('res-com-oc').textContent    = c.comOC;
+  document.getElementById('res-sem-oc').textContent    = c.semOC;
+  document.getElementById('badge-res').textContent     = c.total;
+}
+
+function atualizarProgresso(rows) {
+  const total = rows.length;
+  const done  = rows.filter(r => ['Concluído','Erro','Sem dados'].includes(r.status)).length;
+  const wrap  = document.getElementById('progress-wrap');
+  if (total > 0 && done < total) {
+    wrap.style.display = '';
+    const pct = Math.round((done / total) * 100);
+    document.getElementById('prog-bar').style.width = pct + '%';
+    document.getElementById('prog-text').textContent = `${done} / ${total}`;
+  } else {
+    wrap.style.display = 'none';
+  }
+}
+
+// ── Heartbeat ───────────────────────────────
+function verificarHeartbeat() {
+  google.script.run
+    .withSuccessHandler(state => {
+      state = state || {};
+      const dot      = document.getElementById('bot-dot');
+      const label    = document.getElementById('bot-label');
+      const host     = document.getElementById('bot-host');
+      const btnPar   = document.getElementById('btn-parar');
+      const btnPause = document.getElementById('btn-pausar');
+      const btnResume= document.getElementById('btn-retomar');
+
+      const hide = () => {
+        dot.className = 'bot-dot';
+        label.textContent = 'Offline';
+        host.textContent = '';
+        [btnPar, btnPause, btnResume].forEach(b => b.classList.add('d-none'));
+      };
+
+      if (!state.lastSeen) { hide(); return; }
+      const ago = (Date.now() - new Date(state.lastSeen).getTime()) / 1000;
+      if (ago >= 120) { hide(); return; }
+
+      host.textContent = state.hostname ? '· ' + state.hostname : '';
+
+      const cmd = state.command;
+      if (cmd === 'RUN') {
+        dot.className = 'bot-dot processing';
+        label.textContent = 'Processando';
+        btnPause.classList.remove('d-none');
+        btnResume.classList.add('d-none');
+        btnPar.classList.remove('d-none');
+      } else if (cmd === 'PAUSE') {
+        dot.className = 'bot-dot paused';
+        label.textContent = 'Pausado';
+        btnPause.classList.add('d-none');
+        btnResume.classList.remove('d-none');
+        btnPar.classList.remove('d-none');
+      } else {
+        dot.className = 'bot-dot online';
+        label.textContent = 'Online';
+        btnPause.classList.remove('d-none');
+        btnResume.classList.add('d-none');
+        btnPar.classList.remove('d-none');
+      }
+    })
+    .withFailureHandler(() => {})
+    .getBotState();
+}
+
+// ── Housekeeping ────────────────────────────
+function limparConcluidos() {
+  google.script.run
+    .withSuccessHandler(() => { toast('Concluídos removidos.'); carregarFila(); })
+    .withFailureHandler(e => toast('Erro: ' + e.message, false))
+    .limparConcluidos();
+}
+
+function reprocessarCodigos() {
+  const val = document.getElementById('reprocess-input').value.trim();
+  if (!val) return toast('Cole pelo menos um código.', false);
+  const lista = val.split('\n').filter(l => l.trim()).length;
+  if (!confirm(`Apagar resultados existentes de ${lista} código(s) e reprocessar?\n\nEsta ação não pode ser desfeita.`)) return;
+  google.script.run
+    .withSuccessHandler(r => {
+      if (r && r.success) {
+        toast(`${r.reprocessed} código(s) na fila · ${r.resultadosApagados} resultado(s) apagado(s).`);
+        document.getElementById('reprocess-input').value = '';
+        carregarFila();
+        carregarResultados();
+      }
+    })
+    .withFailureHandler(e => toast('Erro: ' + e.message, false))
+    .reprocessarCodigos(val);
+}
+
+function limparResultados() {
+  if (!confirm('Apagar TODOS os resultados da planilha?')) return;
+  google.script.run
+    .withSuccessHandler(() => { toast('Resultados apagados.'); carregarResultados(); })
+    .withFailureHandler(e => toast('Erro: ' + e.message, false))
+    .limparResultados();
+}
+
+// ── Modal Relatório ─────────────────────────
+function abrirRelatorio() {
+  document.getElementById('rel-overlay').classList.add('open');
+  buscarNoServidor();
+}
+
+function fecharRelatorio(evt) {
+  if (evt && evt.target !== document.getElementById('rel-overlay')) return;
+  document.getElementById('rel-overlay').classList.remove('open');
+}
+
+function limparFiltrosRel() {
+  ['rf-oc','rf-req','rf-material','rf-data-de','rf-data-ate'].forEach(id =>
+    document.getElementById(id).value = '');
+  document.getElementById('rf-oc-tipo').value  = '';
+  document.getElementById('rf-situacao').value = '';
+  buscarNoServidor();
+}
+
+let _relRows = [];
+let _relSeq  = 0;  // cancela respostas atrasadas de chamadas anteriores
+
+function buscarNoServidor() {
+  const seq = ++_relSeq;
+  const f = {
+    ocTipo:   document.getElementById('rf-oc-tipo').value,
+    oc:       document.getElementById('rf-oc').value.trim().toLowerCase(),
+    req:      document.getElementById('rf-req').value.trim().toLowerCase(),
+    material: document.getElementById('rf-material').value.trim().toLowerCase(),
+    situacao: document.getElementById('rf-situacao').value.trim().toLowerCase(),
+    dataDe:   document.getElementById('rf-data-de').value.trim(),
+    dataAte:  document.getElementById('rf-data-ate').value.trim()
+  };
+
+  const tbody = document.getElementById('rel-tbody');
+  tbody.innerHTML = `<tr><td colspan="12" style="text-align:center;padding:2rem;color:var(--muted)">
+    <span class="spinner-border spinner-border-sm" style="width:.85rem;height:.85rem;margin-right:6px"></span>Buscando na planilha...
+  </td></tr>`;
+  document.getElementById('rel-count').textContent = '…';
+
+  google.script.run
+    .withSuccessHandler(result => {
+      if (seq !== _relSeq) return;  // resposta atrasada — já existe chamada mais recente
+      result = result || { rows: [], total: 0 };
+      _relRows = result.rows;
+      document.getElementById('rel-count').textContent =
+        `${result.rows.length} registro(s) encontrado(s) de ${result.total} total`;
+      renderizarTabelaRel(result.rows);
+    })
+    .withFailureHandler(e => {
+      if (seq !== _relSeq) return;
+      tbody.innerHTML = `<tr><td colspan="12" style="text-align:center;padding:2rem;color:#DC2626">Erro: ${esc(e.message)}</td></tr>`;
+    })
+    .buscarResultadosFiltrados(f);
+}
+
+// Dispara busca com pequeno debounce para não chamar GAS a cada tecla
+let _relTimer = null;
+function aplicarFiltrosRel() {
+  clearTimeout(_relTimer);
+  _relTimer = setTimeout(buscarNoServidor, 600);
+}
+
+function renderizarTabelaRel(rows) {
+  const tbody = document.getElementById('rel-tbody');
+  if (!rows.length) {
+    tbody.innerHTML = `<tr><td colspan="12" style="text-align:center;padding:2rem;color:var(--muted);font-size:.8rem">Nenhum registro para estes filtros</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = rows.map((r, i) =>
+    `<tr style="background:${i%2===0?'#fff':'#F8FAFC'}">
+      <td style="padding:.4rem .8rem;border-bottom:1px solid #F1F5F9;font-family:'Fira Code',monospace">${esc(r.codigo)}</td>
+      <td style="padding:.4rem .8rem;border-bottom:1px solid #F1F5F9;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(r.material||'')}">${esc(r.material||'—')}</td>
+      <td style="padding:.4rem .8rem;border-bottom:1px solid #F1F5F9;font-family:'Fira Code',monospace">${esc(r.req||'—')}</td>
+      <td style="padding:.4rem .8rem;border-bottom:1px solid #F1F5F9;white-space:nowrap;font-size:.72rem">${esc(r.data_req||'—')}</td>
+      <td style="padding:.4rem .8rem;border-bottom:1px solid #F1F5F9">${sbadge(r.situacao)}</td>
+      <td style="padding:.4rem .8rem;border-bottom:1px solid #F1F5F9;text-align:right">${esc(r.qtde||'—')}</td>
+      <td style="padding:.4rem .8rem;border-bottom:1px solid #F1F5F9;text-align:right;font-family:'Fira Code',monospace">${esc(r.vlr_req||'—')}</td>
+      <td style="padding:.4rem .8rem;border-bottom:1px solid #F1F5F9;text-align:right;font-family:'Fira Code',monospace">${esc(r.vlr_emp||'—')}</td>
+      <td style="padding:.4rem .8rem;border-bottom:1px solid #F1F5F9;font-size:.72rem;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(r.documento||'')}">${esc(r.documento||'—')}</td>
+      <td style="padding:.4rem .8rem;border-bottom:1px solid #F1F5F9;font-family:'Fira Code',monospace;font-weight:600;color:${r.oc&&r.oc!=='—'?'var(--blue)':'var(--muted)'}">${esc(r.oc||'—')}</td>
+      <td style="padding:.4rem .8rem;border-bottom:1px solid #F1F5F9;white-space:nowrap;font-size:.72rem">${esc(r.data_emissao||'—')}</td>
+      <td style="padding:.4rem .8rem;border-bottom:1px solid #F1F5F9;font-family:'Fira Code',monospace">${esc(r.c_custo||'—')}</td>
+    </tr>`
+  ).join('');
+}
+
+function imprimirRelatorio() {
+  const filtrados = _relRows;
+  if (!filtrados.length) return toast('Nenhum dado para imprimir.', false);
+
+  const date = new Date().toLocaleString('pt-BR');
+
+  const filtrosAtivos = [];
+  const vOCTipo = document.getElementById('rf-oc-tipo').value;
+  const vOC  = document.getElementById('rf-oc').value.trim();
+  const vReq = document.getElementById('rf-req').value.trim();
+  const vMat = document.getElementById('rf-material').value.trim();
+  const vSit = document.getElementById('rf-situacao').value.trim();
+  const vDe  = document.getElementById('rf-data-de').value.trim();
+  const vAte = document.getElementById('rf-data-ate').value.trim();
+  if (vOCTipo === 'tem') filtrosAtivos.push('Com O.C.');
+  else if (vOCTipo === 'sem') filtrosAtivos.push('Sem O.C.');
+  if (vOC)  filtrosAtivos.push(`Nº O.C.: ${vOC}`);
+  if (vReq) filtrosAtivos.push(`Req.: ${vReq}`);
+  if (vMat) filtrosAtivos.push(`Material: ${vMat}`);
+  if (vSit) filtrosAtivos.push(`Situação: ${vSit}`);
+  if (vDe)  filtrosAtivos.push(`De: ${vDe}`);
+  if (vAte) filtrosAtivos.push(`Até: ${vAte}`);
+
+  const cols = ['Código','Material','Req.','Data Req.','Situação','Qtde','Vlr Req.','Vlr Emp.','Documento','O.C.','Dt. Emissão','C. Custo'];
+  const keys = ['codigo','material','req','data_req','situacao','qtde','vlr_req','vlr_emp','documento','oc','data_emissao','c_custo'];
+
+  const rows = filtrados.map((r,i) =>
+    `<tr style="background:${i%2===0?'#fff':'#f8fafc'}">
+      ${keys.map(k=>`<td>${esc(r[k]||'—')}</td>`).join('')}
+    </tr>`
+  ).join('');
+
+  const html = `<!DOCTYPE html><html lang="pt-BR"><head>
+    <meta charset="UTF-8">
+    <title>SICOR — Relatório — ${date}</title>
+    <style>
+      *{box-sizing:border-box;margin:0;padding:0}
+      body{font-family:Arial,sans-serif;font-size:9pt;color:#000;padding:16px}
+      h2{font-size:13pt;font-weight:700;margin-bottom:3px}
+      .meta{font-size:8pt;color:#555;margin-bottom:4px}
+      .filtros{font-size:8pt;color:#334;background:#f1f5f9;padding:4px 8px;border-radius:4px;margin-bottom:10px;display:inline-block}
+      table{width:100%;border-collapse:collapse;font-size:8pt}
+      th{background:#1e3a5f;color:#fff;padding:5px 6px;text-align:left;font-size:7pt;text-transform:uppercase;letter-spacing:.3px;white-space:nowrap}
+      td{padding:4px 6px;border-bottom:1px solid #e2e8f0;white-space:nowrap}
+      tr:nth-child(even) td{background:#f8fafc}
+      .oc{color:#0369a1;font-weight:700}
+      @page{margin:1cm}
+    </style>
+  </head><body>
+    <h2>SICOR — Relatório de Requisições em Compra</h2>
+    <div class="meta">UEL — Gerado em ${date} · ${filtrados.length} registro(s)</div>
+    ${filtrosAtivos.length ? `<div class="filtros">Filtros: ${filtrosAtivos.join(' · ')}</div>` : ''}
+    <table>
+      <thead><tr>${cols.map(c=>`<th>${c}</th>`).join('')}</tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+    <script>setTimeout(()=>window.print(),250);<\/script>
+  </body></html>`;
+
+  const win = window.open('', '_blank', 'width=1100,height=750');
+  if (win) {
+    win.document.write(html);
+    win.document.close();
+  } else {
+    toast('Habilite popups no navegador para imprimir.', false);
+  }
+}
+
+// ── Auto-refresh ────────────────────────────
+// Fila: a cada 8s | Resultados: só na abertura da aba ou manualmente
+function refresh() { carregarFila(); verificarHeartbeat(); }
+refresh();
+carregarResultados(); // carrega 1x no início
+setInterval(refresh, 8000);
+</script>
+</body>
+</html>
