@@ -429,7 +429,6 @@ def loop_consultas():
         time.sleep(3)
     print("\n  SICOR detectado. Aguardando comando RUN no painel GAS...")
 
-    primeiro_ciclo = True
     while True:
         _checar_abort()
 
@@ -437,16 +436,11 @@ def loop_consultas():
         comando = enviar_heartbeat()
 
         if comando == 'STOP':
-            if primeiro_ciclo:
-                # STOP sobrou de sessão anterior — aguarda novo comando
-                print(f"  Aguardando... (comando anterior: STOP)", end='\r')
-                time.sleep(POLL_INTERVAL)
-                primeiro_ciclo = False
-                continue
-            print("  [GAS] Comando STOP recebido — encerrando.")
-            break
-
-        primeiro_ciclo = False
+            # STOP interrompe lote em andamento (for loop abaixo), mas não
+            # encerra o processo — bot fica vivo esperando próximo RUN.
+            print(f"  Aguardando... (parado)", end='\r')
+            time.sleep(POLL_INTERVAL)
+            continue
 
         if comando == 'PAUSE':
             print(f"  [PAUSADO] aguardando retomada...", end='\r')
